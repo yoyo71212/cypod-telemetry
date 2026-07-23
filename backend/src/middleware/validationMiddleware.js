@@ -3,7 +3,7 @@
 const { body, validationResult } = require('express-validator');
 
 const validateRegisterDevice = [
-    body('device_id')
+    body('id')
         .exists().withMessage('Device ID is required').bail()
         // note: according to sample_telemetry.json, device_id should match the format DEV-XXXX where XXXX is a 4-digit number
         .matches(/^DEV-\d{4}$/).withMessage('Device ID must match the format DEV-XXXX').bail(),

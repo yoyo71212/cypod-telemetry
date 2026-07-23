@@ -7,6 +7,7 @@ const errorHandler = require('./middleware/errorMiddleware');
 
 const authRoutes = require('./routers/authRoutes');
 const devicesRoutes = require('./routers/devicesRoutes');
+const alertsRoutes = require('./routers/alertsRoutes');
 
 const app = express();
 
@@ -18,6 +19,8 @@ app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 app.use('/auth', authRoutes);
 
 app.use('/devices', devicesRoutes);
+
+app.use('/alerts', alertsRoutes);
 
 app.use(errorHandler);
 
