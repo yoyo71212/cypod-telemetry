@@ -1,6 +1,7 @@
 // cypod-telemetry
 
 const pool = require('../config/db');
+const cache = require('../utils/cache');
 
 const getDevices = async (req, res, next) => {
     const userId = req.user.id;
@@ -74,8 +75,61 @@ const addTelemetry = async (req, res, next) => {
     }
 }
 
+const getLatestDeviceTelemetry = async (req, res, next) => {
+    const userId = req.user.id;
+    const { id: deviceId } = req.params;
+
+    try {
+        const deviceQuery = 'SELECT * FROM devices WHERE id = $1;';
+        const deviceResult = await pool.query(deviceQuery, [deviceId]);
+        const device = deviceResult.rows[0];
+
+        if (!device) {
+            return next({
+                statusCode: 404,
+                message: 'Device not found'
+            });
+        }
+
+        if (device.user_id !== userId) {
+            return next({
+                statusCode: 403,
+                message: 'Not authorized to access this device telemetry'
+            });
+        }
+
+        // check cache first
+        const cachedTelemetry = cache.getCachedTelemetry(deviceId);
+
+        if (cachedTelemetry) {
+            console.log(`[cache] HIT device=${deviceId}`);
+            return res.status(200).json({ telemetry: cachedTelemetry, _cache: 'HIT' });
+        }
+
+        console.log(`[cache] MISS device=${deviceId}`);
+        const latestTelemetryQuery = 'SELECT * FROM telemetry WHERE device_id = $1 ORDER BY created_at DESC LIMIT 1;';
+        const latestTelemetryResult = await pool.query(latestTelemetryQuery, [deviceId]);
+        const latestTelemetry = latestTelemetryResult.rows[0];
+
+        if (!latestTelemetry) {
+            return next({
+                statusCode: 404,
+                message: 'No telemetry data found for this device'
+            });
+        }
+
+        // cache the latest telemetry for this device
+        cache.setCachedTelemetry(deviceId, latestTelemetry);
+
+        return res.status(200).json({ telemetry: latestTelemetry, _cache: 'MISS' });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getDevices,
     registerDevice,
-    addTelemetry
+    addTelemetry,
+    getLatestDeviceTelemetry
 };
