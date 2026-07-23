@@ -32,6 +32,31 @@ const registerDevice = async (req, res, next) => {
     }
 }
 
+async function raiseAlerts(reading) {
+    const alertsToRaise = [];
+
+    if (reading.battery < process.env.BATTERY_ALERT_THRESHOLD) {
+        alertsToRaise.push({
+            category: 'BATTERY',
+            message: `Low battery alert: ${reading.battery}%`,
+        });
+    }
+
+    if (reading.temperature > process.env.TEMPERATURE_ALERT_THRESHOLD) {
+        alertsToRaise.push({
+            category: 'TEMPERATURE',
+            message: `High temperature alert: ${reading.temperature}°C`,
+        });
+    }
+
+    for (const alert of alertsToRaise) {
+        const insertAlertQuery = 'INSERT INTO alerts (device_id, message, category, is_active, created_at) VALUES ($1, $2, $3, true, NOW())';
+        await pool.query(insertAlertQuery, [reading.device_id, alert.message, alert.category]);
+    }
+
+    return alertsToRaise;
+}
+
 const addTelemetry = async (req, res, next) => {
     const { battery, temperature, lat, lng, status, timestamp } = req.body;
     const { id: deviceId } = req.params;
