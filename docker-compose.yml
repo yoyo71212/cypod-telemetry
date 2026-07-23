@@ -25,12 +25,21 @@ services:
     container_name: cypod-telemetry-api
     restart: unless-stopped
     environment:
+      PORT: 3000
+      # Postgres
+      POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_HOST: postgres
+      # JWT
       JWT_SECRET: ${JWT_SECRET}
-      PORT: 3000
+      # Telemetry
+      TELEMETRY_BACKFILL_THRESHOLD: ${TELEMETRY_BACKFILL_THRESHOLD}
+      LIVE_LIMIT: ${LIVE_LIMIT}
+      BACKFILL_LIMIT: ${BACKFILL_LIMIT}
+      WINDOWS_MS: ${WINDOWS_MS}
+      BATTERY_ALERT_THRESHOLD: ${BATTERY_ALERT_THRESHOLD}
+      TEMPERATURE_ALERT_THRESHOLD: ${TEMPERATURE_ALERT_THRESHOLD}
     ports:
       - "3000:3000"
     depends_on:

@@ -3,7 +3,7 @@
 const LIVE_LIMIT = process.env.LIVE_LIMIT || 10;
 const BACKFILL_LIMIT = process.env.BACKFILL_LIMIT || 300;
 const WINDOW_MS = process.env.WINDOW_MS || 60 * 1000;
-const BACKFILL_THRESHOLD_MS = process.env.BACKFILL_THRESHOLD || 2 * 60 * 1000;
+const TELEMETRY_BACKFILL_THRESHOLD_MS = process.env.TELEMETRY_BACKFILL_THRESHOLD || 2 * 60 * 1000;
 
 const liveHits = new Map();
 const backfillHits = new Map();
@@ -21,7 +21,7 @@ const telemetryRateLimit = (req, res, next) => {
 
     const now = Date.now();
     const recordedAt = new Date(timestamp).getTime();
-    const isBackfill = !Number.isNaN(recordedAt) && (now - recordedAt) > BACKFILL_THRESHOLD_MS;
+    const isBackfill = !Number.isNaN(recordedAt) && (now - recordedAt) > TELEMETRY_BACKFILL_THRESHOLD_MS;
 
     const hitCount = isBackfill ? pruneAndCount(backfillHits, deviceId, now) : pruneAndCount(liveHits, deviceId, now);
 

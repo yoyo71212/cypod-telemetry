@@ -1,13 +1,14 @@
 // cypod-telemetry
 
 const errorHandler = (err, req, res, next) => {
-    const statusCode = err.statusCode || res.statusCode || 500;
+    const isKnownError = Boolean(err.statusCode);
+    const statusCode = err.statusCode || 500;
 
     console.error(`{ success: ${false}, statusCode: ${statusCode}, message: ${err.message} }`);
 
     res.status(statusCode).json({
         success: false,
-        message:  err.message || "Internal Server Error",
+        message: isKnownError ? err.message : "Internal Server Error",
     });
 }
 
