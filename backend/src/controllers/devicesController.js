@@ -98,7 +98,7 @@ const getLatestDeviceTelemetry = async (req, res, next) => {
             });
         }
 
-        // check cache first
+        // note: check cache first
         const cachedTelemetry = cache.getCachedTelemetry(deviceId);
 
         if (cachedTelemetry) {
@@ -118,10 +118,61 @@ const getLatestDeviceTelemetry = async (req, res, next) => {
             });
         }
 
-        // cache the latest telemetry for this device
+        // note: cache the latest telemetry for this device
         cache.setCachedTelemetry(deviceId, latestTelemetry);
 
         return res.status(200).json({ telemetry: latestTelemetry, _cache: 'MISS' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+const getDeviceHistory = async (req, res, next) => {
+    const userId = req.user.id;
+    const { id: deviceId } = req.params;
+    const { from, to } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.pageSize) || 25));
+    const offset = (page - 1) * limit;
+
+    try {
+        const deviceQuery = 'SELECT * FROM devices WHERE id = $1;';
+        const deviceResult = await pool.query(deviceQuery, [deviceId]);
+        const device = deviceResult.rows[0];
+
+        if (!device) {
+            return next({
+                statusCode: 404,
+                message: 'Device not found'
+            });
+        }
+        if (device.user_id !== userId) {
+            return next({
+                statusCode: 403,
+                message: 'Not authorized to access this device telemetry'
+            });
+        }
+
+        const conditions = ['device_id = $1'];
+        const params = [deviceId];
+
+        if (from) {
+            params.push(from);
+            conditions.push(`created_at >= $${params.length}`);
+        }
+
+        if (to) {
+            params.push(to);
+            conditions.push(`created_at <= $${params.length}`);
+        }
+
+        params.push(limit, offset);
+
+        const historyQuery = `SELECT * FROM telemetry WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length};`;
+        const historyResult = await pool.query(historyQuery, params);
+        const history = historyResult.rows;
+
+        return res.status(200).json({ history, page, pageSize: limit });
     } catch (error) {
         next(error);
     }
@@ -131,5 +182,6 @@ module.exports = {
     getDevices,
     registerDevice,
     addTelemetry,
-    getLatestDeviceTelemetry
+    getLatestDeviceTelemetry,
+    getDeviceHistory
 };
